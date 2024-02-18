@@ -2,6 +2,7 @@ package nodrama
 
 import (
 	"flag"
+	"fmt"
 	"log/slog"
 
 	"github.com/go-git/go-git/v5"
@@ -41,41 +42,36 @@ func parseArgs() Options {
 	return options
 }
 
-func run(options Options) {
+func run(options Options) error {
 	srcPath := options.SourcePath
 
 	if srcPath == "" {
-		slog.Error("source path flag -src is empty")
-		return
+		return fmt.Errorf("source path flag -src is empty")
 	}
 
 	if !isDirectoryReadable(srcPath) {
-		slog.Error("cannot read or not a directory", "path", srcPath)
-		return
+		return fmt.Errorf("cannot read or not a directory: %s", srcPath)
 	}
 
 	repo, err := git.PlainOpen(srcPath)
 	if err != nil {
-		slog.Error("error opening git repository", "path", srcPath, "error", err)
-		return
+		return err
 	}
 
 	isClean, err := isRepoClean(repo)
 	if err != nil {
-		slog.Error("error checking repository cleanliness", "repo", repo, "error", err)
-		return
+		return fmt.Errorf("error checking repository cleanliness: %w", err)
 	}
 
 	if !isClean {
-		slog.Error("repository is dirty. Please commit or discard changes")
-		return
+		return fmt.Errorf("repository is dirty. Please commit or discard changes")
 	}
 
 	commitCount, err := countCommits(repo)
 	if err != nil {
-		slog.Error("repo stats failed", "error", err)
-		return
+		return fmt.Errorf("error counting commits: %w", err)
 	}
 
 	slog.Debug("repository stats", "clean", isClean, "repo", srcPath, "commits", commitCount)
+	return nil
 }
