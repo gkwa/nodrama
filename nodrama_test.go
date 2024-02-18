@@ -30,3 +30,24 @@ func TestRunWithNonGitDirectory(t *testing.T) {
 		return
 	}
 }
+
+func TestRunWithNonExistantDirectory(t *testing.T) {
+	nonExistentDir := "/path/to/nonexistent/directory"
+
+	options := Options{
+		SourcePath: nonExistentDir,
+	}
+
+	err := run(options)
+
+	if err == nil {
+		t.Error("expected an error, got nil")
+		return
+	}
+
+	expectedErrorMsg := "cannot read or not a directory"
+	if !strings.Contains(err.Error(), expectedErrorMsg) {
+		t.Errorf("expected error message to contain '%s', got: %s", expectedErrorMsg, err.Error())
+		return
+	}
+}
