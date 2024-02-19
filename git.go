@@ -8,8 +8,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
-func countCommits(r *git.Repository) (int, error) {
-	cIter, err := r.Log(&git.LogOptions{})
+func CountCommits(repo *git.Repository) (int, error) {
+	cIter, err := repo.Log(&git.LogOptions{})
 	if err != nil {
 		return 0, fmt.Errorf("error getting commit iterator: %w", err)
 	}
@@ -26,7 +26,7 @@ func countCommits(r *git.Repository) (int, error) {
 	return count, nil
 }
 
-func isRepoClean(repo *git.Repository) (bool, error) {
+func IsRepoClean(repo *git.Repository) (bool, error) {
 	wt, err := repo.Worktree()
 	if err != nil {
 		return false, fmt.Errorf("error getting worktree: %w", err)

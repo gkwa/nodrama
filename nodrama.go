@@ -42,6 +42,19 @@ func parseArgs() Options {
 	return options
 }
 
+func GitRepoForDir(dir string) (*git.Repository, error) {
+	if !isDirectoryReadable(dir) {
+		return nil, fmt.Errorf("cannot read or not a directory: %s", dir)
+	}
+
+	repo, err := git.PlainOpen(dir)
+	if err != nil {
+		return nil, fmt.Errorf("error opening git repository: %w", err)
+	}
+
+	return repo, nil
+}
+
 func run(options Options) error {
 	srcPath := options.SourcePath
 
@@ -49,16 +62,12 @@ func run(options Options) error {
 		return fmt.Errorf("source path flag -src is empty")
 	}
 
-	if !isDirectoryReadable(srcPath) {
-		return fmt.Errorf("cannot read or not a directory: %s", srcPath)
-	}
-
-	repo, err := git.PlainOpen(srcPath)
+	repo, err := GitRepoForDir(srcPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("error opening git repository: %w", err)
 	}
 
-	isClean, err := isRepoClean(repo)
+	isClean, err := IsRepoClean(repo)
 	if err != nil {
 		return fmt.Errorf("error checking repository cleanliness: %w", err)
 	}
@@ -67,7 +76,7 @@ func run(options Options) error {
 		return fmt.Errorf("repository is dirty. Please commit or discard changes")
 	}
 
-	commitCount, err := countCommits(repo)
+	commitCount, err := CountCommits(repo)
 	if err != nil {
 		return fmt.Errorf("error counting commits: %w", err)
 	}
