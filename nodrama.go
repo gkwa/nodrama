@@ -4,7 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -115,7 +117,11 @@ func GitCommitAll(repoRoot, msg string) error {
 func GetRecentCommitFiles(repo *git.Repository) ([]string, error) {
 	ref, err := repo.Head()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get HEAD reference: %w", err)
+		expectedErrorMsg := "failed to get HEAD reference"
+		if !strings.Contains(err.Error(), expectedErrorMsg) {
+			return []string{}, nil
+		}
+		return nil, fmt.Errorf("calling git.Head() returned unexpected error: %w", err)
 	}
 
 	commit, err := repo.CommitObject(ref.Hash())
@@ -149,4 +155,26 @@ func GetRecentCommitFiles(repo *git.Repository) ([]string, error) {
 	}
 
 	return absolutePaths, nil
+}
+
+func SumBytesOfFiles(paths []string) (int64, error) {
+	var totalBytes int64
+
+	for _, path := range paths {
+		file, err := os.Open(path)
+		if err != nil {
+			return 0, fmt.Errorf("failed to open file %s: %w", path, err)
+		}
+		defer file.Close()
+
+		fileInfo, err := file.Stat()
+		if err != nil {
+			return 0, fmt.Errorf("failed to get file info for %s: %w", path, err)
+		}
+
+		bytes := fileInfo.Size()
+		totalBytes += bytes
+	}
+
+	return totalBytes, nil
 }

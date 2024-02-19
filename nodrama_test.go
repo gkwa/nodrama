@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
 func TestRunWithNonGitDirectory(t *testing.T) {
@@ -265,5 +266,78 @@ func TestGetRecentCommitFiles(t *testing.T) {
 	}
 	if !reflect.DeepEqual(files, expectedPaths) {
 		t.Errorf("expected file paths %v, got %v", expectedPaths, files)
+	}
+}
+
+func TestGetRecentCommitFilesWhenNoCommitsExistYet(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "nodrama-test")
+	if err != nil {
+		t.Fatalf("failed to create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	repo, err := git.PlainInit(tmpDir, false)
+	if err != nil {
+		t.Fatalf("failed to initialize git repository: %v", err)
+	}
+
+	files, err := GetRecentCommitFiles(repo)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	if len(files) != 0 {
+		t.Errorf("expected empty files list, got: %v", files)
+	}
+}
+
+func TestSumBytesOfFiles(t *testing.T) {
+	repoDir, err := os.MkdirTemp("", "test-repo")
+	if err != nil {
+		t.Fatalf("failed to create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(repoDir)
+
+	repo, err := git.PlainInit(repoDir, false)
+	if err != nil {
+		t.Fatalf("failed to initialize git repository: %v", err)
+	}
+
+	filePath := filepath.Join(repoDir, "test.txt")
+	file, err := os.Create(filePath)
+	if err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+	defer file.Close()
+	file.WriteString("aaa") // Write 3 bytes to the file
+
+	w, err := repo.Worktree()
+	if err != nil {
+		t.Fatalf("failed to get worktree: %v", err)
+	}
+	_, err = w.Add("test.txt")
+	if err != nil {
+		t.Fatalf("failed to add file to git: %v", err)
+	}
+
+	_, err = w.Commit("Initial commit", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "Test User",
+			Email: "test@example.com",
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to commit changes: %v", err)
+	}
+
+	fileSize, err := SumBytesOfFiles([]string{filePath})
+	if err != nil {
+		t.Fatalf("SumBytesOfFiles failed: %v", err)
+	}
+
+	expectedSize := int64(3)
+	if fileSize != expectedSize {
+		t.Errorf("expected file size to be %d byte(s), got %d", expectedSize, fileSize)
 	}
 }
